@@ -12,9 +12,9 @@ def get_sensor_data():
     gyro_data = sensor.get_gyro_data()
     
     # Scale accelerometer raw values to g-forces
-    accel_x = accel_data["x"] / 16384.0
-    accel_y = accel_data["y"] / 16384.0
-    accel_z = accel_data["z"] / 16384.0
+    accel_x = accel_data["x"] 
+    accel_y = accel_data["y"] 
+    accel_z = accel_data["z"] 
     
     # Get gyroscope data (degrees per second)
     gyro_x = gyro_data["x"] / 131.0
@@ -38,14 +38,16 @@ gyro_y_data = [0] * data_length
 gyro_z_data = [0] * data_length
 
 # Initialize the plot
-fig, axes = plt.subplots(6, 1, figsize=(10, 12))
+fig, axes = plt.subplots(2, 3, figsize=(12, 8))  # 2x3 grid
+
+# Flatten the axes for easy indexing
+axes = axes.flatten()
 
 # Setting up titles and labels
-titles = ["İvme X-Ekseni", "İvme Y-Ekseni", "İvme Z-Ekseni", 
-          "Jiroskop X-Ekseni", "Jiroskop Y-Ekseni", "Jiroskop Z-Ekseni"]
-ylabels = ["ivme (g)", "ivme (g)", "ivme (g)",
-           "Jiroskop (°/s)", "Jiroskop (°/s)", "Jiroskop (°/s)"]
-           
+titles = ["Accelerometer X-axis", "Accelerometer Y-axis", "Accelerometer Z-axis", 
+          "Gyroscope X-axis", "Gyroscope Y-axis", "Gyroscope Z-axis"]
+ylabels = ["Acceleration (g)", "Acceleration (g)", "Acceleration (g)", 
+           "Rotation (deg/s)", "Rotation (deg/s)", "Rotation (deg/s)"]
 
 lines = []
 for i, ax in enumerate(axes):
