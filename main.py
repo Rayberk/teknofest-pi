@@ -1,5 +1,6 @@
 import time
 import csv
+import uuid  # For generating unique filenames
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import mpu6050
@@ -12,9 +13,9 @@ def get_sensor_data():
     gyro_data = sensor.get_gyro_data()
     
     # Scale accelerometer raw values to g-forces
-    accel_x = accel_data["x"] 
-    accel_y = accel_data["y"] 
-    accel_z = accel_data["z"] 
+    accel_x = accel_data["x"] / 16384.0
+    accel_y = accel_data["y"] / 16384.0
+    accel_z = accel_data["z"] / 16384.0
     
     # Get gyroscope data (degrees per second)
     gyro_x = gyro_data["x"] / 131.0
@@ -99,12 +100,12 @@ def update_graph(frame):
 # Start time for the x-axis
 start_time = time.time()
 
-# Animate the graphs, updating every 40ms (~25 fps)
-ani = FuncAnimation(fig, update_graph, interval=40)
+# Generate a unique filename for the CSV file using uuid4
+unique_filename = f"sensor_data_{uuid.uuid4()}.csv"
 
 # CSV saving functionality
 def save_data_to_csv():
-    with open('sensor_data.csv', mode='w', newline='') as file:
+    with open(unique_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Time", "Accel X", "Accel Y", "Accel Z", "Gyro X", "Gyro Y", "Gyro Z"])
         for i in range(len(times)):
