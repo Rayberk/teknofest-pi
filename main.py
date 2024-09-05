@@ -3,6 +3,10 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import mpu6050
+import random
+import string
+import signal
+import sys
 
 sensor = mpu6050.mpu6050(0x68, bus=1)
 
@@ -12,14 +16,14 @@ def get_sensor_data():
     gyro_data = sensor.get_gyro_data()
     
     # Scale accelerometer raw values to g-forces
-    accel_x = accel_data["x"] / 16384.0
-    accel_y = accel_data["y"] / 16384.0
-    accel_z = accel_data["z"] / 16384.0
+    accel_x = accel_data["x"] 
+    accel_y = accel_data["y"] 
+    accel_z = accel_data["z"] 
     
     # Get gyroscope data (degrees per second)
-    gyro_x = gyro_data["x"] / 131.0
-    gyro_y = gyro_data["y"] / 131.0
-    gyro_z = gyro_data["z"] / 131.0
+    gyro_x = gyro_data["x"] 
+    gyro_y = gyro_data["y"] 
+    gyro_z = gyro_data["z"] 
     
     return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
 
@@ -96,22 +100,40 @@ def update_graph(frame):
 
     return lines
 
+# Generate a unique ID for the CSV file
+def generate_unique_id():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+
+# Save data to CSV
+def save_data_to_csv():
+    unique_id = generate_unique_id()
+    filename = f'sensor_data_{unique_id}.csv'
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Time", "Accel X", "Accel Y", "Accel Z", "Gyro X", "Gyro Y", "Gyro Z"])
+        for i in range(len(times)):
+            writer.writerow([times[i], accel_x_data[i], accel_y_data[i], accel_z_data[i],
+                             gyro_x_data[i], gyro_y_data[i], gyro_z_data[i]])
+    print(f"Data saved to {filename}")
+
+# Function to handle clean up on exit
+def handle_exit(signum, frame):
+    print("Shutting down sensor and saving data...")
+    save_data_to_csv()
+    plt.close(fig)
+    sys.exit(0)
+
+# Handle shutdown on interrupt (Ctrl+C) or close event
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
+
 # Start time for the x-axis
 start_time = time.time()
 
 # Animate the graphs, updating every 40ms (~25 fps)
 ani = FuncAnimation(fig, update_graph, interval=40)
 
-# CSV saving functionality
-def save_data_to_csv():
-    with open('sensor_data.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Time", "Accel X", "Accel Y", "Accel Z", "Gyro X", "Gyro Y", "Gyro Z"])
-        for i in range(len(times)):
-            writer.writerow([times[i], accel_x_data[i], accel_y_data[i], accel_z_data[i],
-                             gyro_x_data[i], gyro_y_data[i], gyro_z_data[i]])
-
-# Save data to CSV file when the plot window is closed
+# CSV saving functionality on window close
 def on_close(event):
     save_data_to_csv()
 
