@@ -1,53 +1,88 @@
-import csv
 import time
-from mpu6050 import mpu6050
-import Adafruit_CharLCD as LCD
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import mpu6050
 
-# Initialize the MPU6050 sensor
-sensor = mpu6050(0x68)
+sensor = mpu6050.mpu6050(0x68, bus=1)
 
-# Initialize the LCD (adjust pins according to your setup)
-lcd_rs = 26
-lcd_en = 19
-lcd_d4 = 13
-lcd_d5 = 6
-lcd_d6 = 5
-lcd_d7 = 11
-lcd_columns = 16
-lcd_rows = 2
 
-lcd = LCD.Adafruit_CharLCD(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, lcd_columns, lcd_rows)
+def get_accel_data():
+    # Read accelerometer raw values and scale to g-forces
+    accel_x = mpu6050.get_accel_data().x / 16384.0
+    accel_y = mpu6050.get_accel_data().y / 16384.0
+    accel_z = mpu6050.get_accel_data().z / 16384.0
+    return accel_x, accel_y, accel_z
 
-# Function to write data to a CSV file
-def record_gyroscope_data(duration):
-    with open('gyroscope_data.csv', mode='w') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Time', 'Accel_X', 'Accel_Y', 'Accel_Z', 'Gyro_X', 'Gyro_Y', 'Gyro_Z'])
+# Data collection setup
+sample_rate = 1 / 25  # 25 samples per second
+time_window = 10      # 10 seconds of data for the graph
+data_length = int(25 * time_window)
 
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            accel_data = sensor.get_accel_data()
-            gyro_data = sensor.get_gyro_data()
+# Initialize lists for storing data
+times = [0] * data_length
+accel_x_data = [0] * data_length
+accel_y_data = [0] * data_length
+accel_z_data = [0] * data_length
 
-            current_time = time.time() - start_time
-            writer.writerow([
-                current_time,
-                accel_data['x'], accel_data['y'], accel_data['z'],
-                gyro_data['x'], gyro_data['y'], gyro_data['z']
-            ])
-            time.sleep(0.04)
+# Initialize the plot
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 8))
 
-# Display "Recording..." on the LCD
-lcd.clear()
-lcd.message("Recording...")
+ax1.set_title("Accelerometer X-axis")
+ax1.set_xlabel("Time (s)")
+ax1.set_ylabel("Acceleration (g)")
+ax1.set_ylim([-2, 2])
 
-# Start recording gyroscope data for 10 seconds
-record_duration = 10  # in seconds
-record_gyroscope_data(record_duration)
+ax2.set_title("Accelerometer Y-axis")
+ax2.set_xlabel("Time (s)")
+ax2.set_ylabel("Acceleration (g)")
+ax2.set_ylim([-2, 2])
 
-# Display "Done" on the LCD after recording
-lcd.clear()
-lcd.message("Done")
+ax3.set_title("Accelerometer Z-axis")
+ax3.set_xlabel("Time (s)")
+ax3.set_ylabel("Acceleration (g)")
+ax3.set_ylim([-2, 2])
 
-# Cleanup
-lcd.clear()
+# Create line objects for the graphs
+line_x, = ax1.plot(times, accel_x_data, 'r-')
+line_y, = ax2.plot(times, accel_y_data, 'g-')
+line_z, = ax3.plot(times, accel_z_data, 'b-')
+
+def update_graph(frame):
+    global times, accel_x_data, accel_y_data, accel_z_data
+
+    # Get new accelerometer data
+    accel_x, accel_y, accel_z = get_accel_data()
+    
+    # Update the data lists
+    times.append(time.time() - start_time)
+    accel_x_data.append(accel_x)
+    accel_y_data.append(accel_y)
+    accel_z_data.append(accel_z)
+
+    # Keep only the last 'data_length' points
+    times = times[-data_length:]
+    accel_x_data = accel_x_data[-data_length:]
+    accel_y_data = accel_y_data[-data_length:]
+    accel_z_data = accel_z_data[-data_length:]
+
+    # Update the line data for the plot
+    line_x.set_data(times, accel_x_data)
+    line_y.set_data(times, accel_y_data)
+    line_z.set_data(times, accel_z_data)
+
+    # Adjust the x-axis limits to always show the last 'time_window' seconds
+    ax1.set_xlim([times[0], times[-1]])
+    ax2.set_xlim([times[0], times[-1]])
+    ax3.set_xlim([times[0], times[-1]])
+
+    return line_x, line_y, line_z
+
+# Start time for the x-axis
+start_time = time.time()
+
+# Animate the graphs, updating every 40ms (~25 fps)
+ani = FuncAnimation(fig, update_graph, interval=40)
+
+# Display the plot
+plt.tight_layout()
+plt.show()
