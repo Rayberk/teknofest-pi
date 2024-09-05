@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+import os
 
 # Load the CSV data into a pandas DataFrame
 def load_sensor_data(file_path):
@@ -25,8 +26,8 @@ def plot_scrollable_graph(file_path):
     total_points = len(times)
     window_size = 250  # Number of points to show at once (adjustable)
 
-    # Create figure and axes for the subplots (2 rows, 3 columns)
-    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    # Create figure and axes for the subplots (6 rows, 1 column)
+    fig, axes = plt.subplots(6, 1, figsize=(12, 24))  # Stacked vertically with a large height
     plt.subplots_adjust(bottom=0.2)  # Add space for the slider
 
     # Titles and labels for each axis
@@ -35,9 +36,6 @@ def plot_scrollable_graph(file_path):
     ylabels = ["Acceleration (g)", "Acceleration (g)", "Acceleration (g)",
                "Rotation (deg/s)", "Rotation (deg/s)", "Rotation (deg/s)"]
 
-    # Flatten axes for easier access
-    axes = axes.flatten()
-
     # Initialize lines for each subplot
     lines = []
     for i, ax in enumerate(axes):
@@ -45,6 +43,7 @@ def plot_scrollable_graph(file_path):
         ax.set_xlabel("Time (s)")
         ax.set_ylabel(ylabels[i])
         ax.set_xlim(times[0], times[window_size-1])  # Initial x-axis limits
+        ax.set_ylim(min(data.iloc[:, i+1])*10, max(data.iloc[:, i+1])*10)  # 10x y-limits
         lines.append(ax.plot(times[:window_size], [0]*window_size, 'r-')[0])
 
     # Assign the right data to each line
@@ -78,9 +77,15 @@ def plot_scrollable_graph(file_path):
     slider.on_changed(update)
 
     # Show the plot
+    fig.canvas.manager.window.showMaximized()  # Maximize window for full-screen view
     plt.show()
 
-# Usage
-# Replace 'sensor_data_XXXX.csv' with the actual filename
-file_path = 'sensor_data_XXXX.csv'
-plot_scrollable_graph(file_path)
+# Ask for file ID (last 4 digits)
+file_id = input("Enter the last 4 digits of the sensor data file: ")
+file_path = f'sensor_data_{file_id}.csv'
+
+# Check if the file exists before proceeding
+if os.path.exists(file_path):
+    plot_scrollable_graph(file_path)
+else:
+    print(f"File 'sensor_data_{file_id}.csv' not found.")
