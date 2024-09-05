@@ -5,12 +5,12 @@ import mpu6050
 
 sensor = mpu6050.mpu6050(0x68, bus=1)
 
-
+# https://www.youtube.com/watch?v=XuLuNzQeXB0
 def get_accel_data():
     # Read accelerometer raw values and scale to g-forces
-    accel_x = mpu6050.get_accel_data().x / 16384.0
-    accel_y = mpu6050.get_accel_data().y / 16384.0
-    accel_z = mpu6050.get_accel_data().z / 16384.0
+    accel_x = sensor.get_accel_data()["x"] / 16384.0
+    accel_y = sensor.get_accel_data().["y"] / 16384.0
+    accel_z = sensor.get_accel_data().["z"] / 16384.0
     return accel_x, accel_y, accel_z
 
 # Data collection setup
