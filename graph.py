@@ -26,59 +26,51 @@ def plot_scrollable_graph(file_path):
     total_points = len(times)
     window_size = 250  # Number of points to show at once (adjustable)
 
-    # Create figure and axes for the subplots (6 rows, 1 column)
-    fig, axes = plt.subplots(6, 1, figsize=(12, 24))  # Stacked vertically with a large height
-    plt.subplots_adjust(bottom=0.2)  # Add space for the slider
-
-    # Titles and labels for each axis
+    # Titles and labels for each plot
     titles = ["Accelerometer X", "Accelerometer Y", "Accelerometer Z",
               "Gyroscope X", "Gyroscope Y", "Gyroscope Z"]
     ylabels = ["Acceleration (g)", "Acceleration (g)", "Acceleration (g)",
                "Rotation (deg/s)", "Rotation (deg/s)", "Rotation (deg/s)"]
 
-    # Initialize lines for each subplot
-    lines = []
-    for i, ax in enumerate(axes):
+    # Data map to assign data to each graph
+    data_map = [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z]
+
+    # Create a separate figure for each plot
+    for i in range(6):
+        fig, ax = plt.subplots(figsize=(10, 6))  # Create a new figure for each graph
         ax.set_title(titles[i])
         ax.set_xlabel("Time (s)")
         ax.set_ylabel(ylabels[i])
         ax.set_xlim(times[0], times[window_size-1])  # Initial x-axis limits
-        ax.set_ylim(min(data.iloc[:, i+1])*10, max(data.iloc[:, i+1])*10)  # 10x y-limits
-        lines.append(ax.plot(times[:window_size], [0]*window_size, 'r-')[0])
+        ax.set_ylim(min(data_map[i])*10, max(data_map[i])*10)  # 10x y-limits
+        
+        # Initialize the line with the initial data
+        line, = ax.plot(times[:window_size], data_map[i][:window_size], 'r-')
 
-    # Assign the right data to each line
-    data_map = [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z]
+        # Function to update the graph as the slider is moved
+        def update(val, line=line, ax=ax, i=i):
+            idx = int(val)  # Get the slider value as an integer index
+            start = idx
+            end = idx + window_size
 
-    # Update the lines with the initial data (first window_size points)
-    for i, line in enumerate(lines):
-        line.set_ydata(data_map[i][:window_size])
-
-    # Function to update the graph as the slider is moved
-    def update(val):
-        idx = int(val)  # Get the slider value as an integer index
-        start = idx
-        end = idx + window_size
-
-        # Update x-axis limits for all plots
-        for ax in axes:
+            # Update x-axis limits for the plot
             ax.set_xlim(times[start], times[end-1])
 
-        # Update y-data for all lines
-        for i, line in enumerate(lines):
+            # Update y-data for the line
             line.set_data(times[start:end], data_map[i][start:end])
 
-        fig.canvas.draw_idle()  # Redraw the canvas
+            fig.canvas.draw_idle()  # Redraw the canvas
 
-    # Add a slider below the plot
-    ax_slider = plt.axes([0.2, 0.05, 0.65, 0.03], facecolor='lightgoldenrodyellow')
-    slider = Slider(ax_slider, 'Scroll', 0, total_points-window_size, valinit=0, valstep=1)
+        # Add a slider below the plot
+        ax_slider = plt.axes([0.2, 0.05, 0.65, 0.03], facecolor='lightgoldenrodyellow')
+        slider = Slider(ax_slider, 'Scroll', 0, total_points-window_size, valinit=0, valstep=1)
 
-    # Call update function when the slider is changed
-    slider.on_changed(update)
+        # Call update function when the slider is changed
+        slider.on_changed(update)
 
-    # Show the plot
-    fig.canvas.manager.window.showMaximized()  # Maximize window for full-screen view
-    plt.show()
+        # Show the plot in a separate window
+        fig.canvas.manager.window.showMaximized()  # Maximize window for full-screen view
+        plt.show()
 
 # Ask for file ID (last 4 digits)
 file_id = input("Enter the last 4 digits of the sensor data file: ")
