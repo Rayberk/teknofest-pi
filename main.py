@@ -1,28 +1,39 @@
 import time
 import csv
-import uuid  # For generating unique filenames
+import uuid
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import mpu6050
 
+# Use TkAgg backend for matplotlib to fix Wayland issue
+matplotlib.use('TkAgg')
+
+# Initialize the sensor
 sensor = mpu6050.mpu6050(0x68, bus=1)
 
+# Function to read accelerometer and gyroscope data
 def get_sensor_data():
-    # Read accelerometer and gyroscope data
-    accel_data = sensor.get_accel_data()
-    gyro_data = sensor.get_gyro_data()
-    
-    # Scale accelerometer raw values to g-forces
-    accel_x = accel_data["x"] / 16384.0
-    accel_y = accel_data["y"] / 16384.0
-    accel_z = accel_data["z"] / 16384.0
-    
-    # Get gyroscope data (degrees per second)
-    gyro_x = gyro_data["x"] / 131.0
-    gyro_y = gyro_data["y"] / 131.0
-    gyro_z = gyro_data["z"] / 131.0
-    
-    return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
+    try:
+        # Read accelerometer and gyroscope data
+        accel_data = sensor.get_accel_data()
+        gyro_data = sensor.get_gyro_data()
+
+        # Scale accelerometer raw values to g-forces
+        accel_x = accel_data["x"] / 16384.0
+        accel_y = accel_data["y"] / 16384.0
+        accel_z = accel_data["z"] / 16384.0
+
+        # Get gyroscope data (degrees per second)
+        gyro_x = gyro_data["x"] / 131.0
+        gyro_y = gyro_data["y"] / 131.0
+        gyro_z = gyro_data["z"] / 131.0
+
+        print(f"Accel: x={accel_x}, y={accel_y}, z={accel_z}; Gyro: x={gyro_x}, y={gyro_y}, z={gyro_z}")
+        return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
+    except Exception as e:
+        print(f"Error reading sensor data: {e}")
+        return 0, 0, 0, 0, 0, 0  # Return zero in case of error
 
 # Data collection setup
 sample_rate = 1 / 25  # 25 samples per second
@@ -119,6 +130,14 @@ def on_close(event):
 # Connect the window close event to the save function
 fig.canvas.mpl_connect('close_event', on_close)
 
-# Display the plot
-plt.tight_layout()
-plt.show()
+# Ensure proper cleanup (sensor close and data save) when the program exits
+try:
+    # Display the plot
+    ani = FuncAnimation(fig, update_graph, interval=40)
+    plt.tight_layout()
+    plt.show()
+
+finally:
+    # This block runs no matter how the script is terminated
+    save_data_to_csv()  # Save data when script ends
+    print("Sensor data collection stopped and data saved.")
