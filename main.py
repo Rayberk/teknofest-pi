@@ -62,4 +62,96 @@ for i, ax in enumerate(axes):
     ax.set_ylim([-2, 2] if i < 3 else [-250, 250])
     lines.append(ax.plot(times, [0] * data_length, 'r-')[0])
 
-# Function
+# Function to update the plot data
+def update_graph(frame):
+    global times, accel_x_data, accel_y_data, accel_z_data, gyro_x_data, gyro_y_data, gyro_z_data
+
+    # Get new sensor data
+    accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = get_sensor_data()
+    
+    # Append the new data
+    times.append(time.time() - start_time)
+    accel_x_data.append(accel_x)
+    accel_y_data.append(accel_y)
+    accel_z_data.append(accel_z)
+    gyro_x_data.append(gyro_x)
+    gyro_y_data.append(gyro_y)
+    gyro_z_data.append(gyro_z)
+
+    # Keep only the last 'data_length' points
+    times = times[-data_length:]
+    accel_x_data = accel_x_data[-data_length:]
+    accel_y_data = accel_y_data[-data_length:]
+    accel_z_data = accel_z_data[-data_length:]
+    gyro_x_data = gyro_x_data[-data_length:]
+    gyro_y_data = gyro_y_data[-data_length:]
+    gyro_z_data = gyro_z_data[-data_length:]
+
+    # Update the line data for the plot
+    lines[0].set_data(times, accel_x_data)
+    lines[1].set_data(times, accel_y_data)
+    lines[2].set_data(times, accel_z_data)
+    lines[3].set_data(times, gyro_x_data)
+    lines[4].set_data(times, gyro_y_data)
+    lines[5].set_data(times, gyro_z_data)
+
+    # Adjust the x-axis limits to always show the last 'time_window' seconds
+    for ax in axes:
+        ax.set_xlim([times[0], times[-1]])
+
+    return lines
+
+# Generate a unique ID for the CSV file
+def generate_unique_id():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+
+# Save data to CSV
+def save_data_to_csv(filename=None):
+    unique_id = generate_unique_id()
+    if filename is None:
+        filename = f'sensor_data_{unique_id}.csv'
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Time", "Accel X", "Accel Y", "Accel Z", "Gyro X", "Gyro Y", "Gyro Z"])
+        for i in range(len(times)):
+            writer.writerow([times[i], accel_x_data[i], accel_y_data[i], accel_z_data[i],
+                             gyro_x_data[i], gyro_y_data[i], gyro_z_data[i]])
+    print(f"Data autosaved to {filename}")
+
+# Function to handle clean up on exit
+def handle_exit(signum, frame):
+    print("Shutting down sensor and saving data...")
+    save_data_to_csv()  # Final save before exit
+    plt.close(fig)
+    sys.exit(0)
+
+# Handle shutdown on interrupt (Ctrl+C) or close event
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
+
+# Start time for the x-axis
+start_time = time.time()
+
+# Autosave function running every 2 seconds
+def autosave():
+    while True:
+        time.sleep(2)
+        save_data_to_csv(f'sensor_data_autosave.csv')
+
+# Start autosaving in a separate thread
+autosave_thread = threading.Thread(target=autosave, daemon=True)
+autosave_thread.start()
+
+# Animate the graphs, updating every 40ms (~25 fps)
+ani = FuncAnimation(fig, update_graph, interval=40)
+
+# CSV saving functionality on window close
+def on_close(event):
+    save_data_to_csv()
+
+# Connect the window close event to the save function
+fig.canvas.mpl_connect('close_event', on_close)
+
+# Display the plot
+plt.tight_layout()
+plt.show()
