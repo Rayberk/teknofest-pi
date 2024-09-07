@@ -8,6 +8,12 @@ import string
 import signal
 import sys
 import threading
+import RPi.GPIO as GPIO
+
+# Setup for the buzzer
+buzzer_pin = 18  # Define your buzzer GPIO pin
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(buzzer_pin, GPIO.OUT)
 
 sensor = mpu6050.mpu6050(0x68, bus=1)
 
@@ -123,6 +129,7 @@ def handle_exit(signum, frame):
     print("Shutting down sensor and saving data...")
     save_data_to_csv()  # Final save before exit
     plt.close(fig)
+    GPIO.cleanup()  # Clean up GPIO settings
     sys.exit(0)
 
 # Handle shutdown on interrupt (Ctrl+C) or close event
@@ -138,9 +145,29 @@ def autosave():
         time.sleep(2)
         save_data_to_csv(f'sensor_data_autosave.csv')
 
+# Buzzer function to play different tones every 10 seconds
+def buzzer_tones():
+    pwm = GPIO.PWM(buzzer_pin, 440)  # Initialize PWM on the buzzer pin
+    tones = [440, 523, 587, 659, 698]  # Different frequencies for the buzzer (Hz)
+    tone_index = 0
+
+    while True:
+        pwm.start(50)  # 50% duty cycle
+        pwm.ChangeFrequency(tones[tone_index])  # Set the frequency for the tone
+        time.sleep(0.5)  # Play the tone for 0.5 seconds
+        pwm.stop()
+        
+        tone_index = (tone_index + 1) % len(tones)  # Move to the next tone
+        
+        time.sleep(10)  # Wait for 10 seconds before playing the next tone
+
 # Start autosaving in a separate thread
 autosave_thread = threading.Thread(target=autosave, daemon=True)
 autosave_thread.start()
+
+# Start buzzer tones in a separate thread
+buzzer_thread = threading.Thread(target=buzzer_tones, daemon=True)
+buzzer_thread.start()
 
 # Animate the graphs, updating every 40ms (~25 fps)
 ani = FuncAnimation(fig, update_graph, interval=40)
